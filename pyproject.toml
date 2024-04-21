@@ -1,0 +1,36 @@
+[project]
+name = "picomc"
+version = "0.5"
+description = "A very small CLI Minecraft launcher."
+authors = [
+    { name = "Samuel Čavoj", email = "samuel@cavoj.net" }
+]
+dependencies = [
+    "click~=8.1",
+    "coloredlogs~=15.0",
+    "colorama~=0.4",
+    "requests~=2.31",
+    "tqdm~=4.66",
+]
+readme = "README.md"
+requires-python = ">= 3.8"
+
+[project.scripts]
+picomc = "picomc:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.rye]
+managed = true
+dev-dependencies = []
+
+[tool.hatch.metadata]
+allow-direct-references = true
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/picomc"]
+
+[tool.ruff.lint]
+extend-select = ["I", "W"]

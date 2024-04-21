@@ -8,9 +8,6 @@ from pathlib import Path
 from string import Template
 from tempfile import mkdtemp
 
-import requests
-
-import picomc
 from picomc import logging
 from picomc.errors import RefreshError
 from picomc.java import assert_java
@@ -180,7 +177,7 @@ class Instance:
                 res = tmpl.substitute(
                     natives_directory=natives,
                     launcher_name="picomc",
-                    launcher_version=picomc.__version__,
+                    launcher_version="1",
                     classpath=classpath,
                     version_name=v.version_name,
                     jar_name=v.jarname,

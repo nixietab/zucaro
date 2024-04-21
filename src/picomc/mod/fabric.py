@@ -67,7 +67,7 @@ def generate_vspec_obj(version_name, loader_obj, loader_version, game_version):
     out["time"] = current_time
 
     mainClass = loader_obj["mainClass"]
-    if type(mainClass) is dict:
+    if isinstance(mainClass, dict):
         mainClass = mainClass["client"]
     out["mainClass"] = mainClass
 
@@ -136,7 +136,10 @@ def install_cli(launcher, game_version, loader_version, name):
     versions_root = launcher.get_path(Directory.VERSIONS)
     try:
         install(
-            versions_root, game_version, loader_version, version_name=name,
+            versions_root,
+            game_version,
+            loader_version,
+            version_name=name,
         )
     except VersionError as e:
         logger.error(e)

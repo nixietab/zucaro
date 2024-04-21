@@ -47,3 +47,9 @@ picomc --help
 
 and you should be able to figure it out. More detailed documentation
 may appear someday in the future.
+
+Development
+---
+
+For project management and dependency tracking `picomc` uses
+[Rye](https://rye-up.com/).

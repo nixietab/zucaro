@@ -234,7 +234,7 @@ def install_113(ctx: ForgeInstallContext):
 
     if is_wrapper_new:
         logger.debug("Using new PicoForgeWrapper")
-        if not "jvm" in vspec["arguments"]:
+        if "jvm" not in vspec["arguments"]:
             vspec["arguments"]["jvm"] = list()
         vspec["arguments"]["jvm"] += [f"-Dpicomc.mainClass={original_main_class}"]
 

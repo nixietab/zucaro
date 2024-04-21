@@ -10,11 +10,15 @@ from picomc.logging import logger
 
 
 def print_version(printer):
+    import importlib.metadata
     import platform
 
-    from picomc import __version__
+    try:
+        version = importlib.metadata.version("picomc")
+    except importlib.metadata.PackageNotFoundError:
+        version = "?"
 
-    printer("picomc, version {}".format(__version__))
+    printer("picomc, version {}".format(version))
     printer("Python {}".format(platform.python_version()))
 
 

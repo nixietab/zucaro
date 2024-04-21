@@ -1,4 +1,3 @@
-from urllib.error import HTTPError
 from urllib.parse import urljoin
 
 import requests
@@ -66,7 +65,7 @@ class MojangYggdrasil:
             name = j["selectedProfile"]["name"]
             return (access_token, uuid, name)
         except KeyError:
-            raise RefreshError("Missing field in response", e)
+            raise RefreshError("Missing field in response")
 
     def validate(self, access_token):
         ep = urljoin(self.BASE_URL, "/validate")

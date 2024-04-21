@@ -1,8 +1,10 @@
+# python generated files
 __pycache__/
-*.py[doc]
-*.egg
+*.py[oc]
+build/
+dist/
+wheels/
 *.egg-info
-build
-dist
-.vscode
-.idea
+
+# venv
+.venv
