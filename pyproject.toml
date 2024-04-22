@@ -1,6 +1,6 @@
 [project]
 name = "picomc"
-version = "0.5"
+version = "0.5.1"
 description = "A very small CLI Minecraft launcher."
 authors = [
     { name = "Samuel Čavoj", email = "samuel@cavoj.net" }

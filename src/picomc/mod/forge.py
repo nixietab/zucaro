@@ -46,12 +46,12 @@ FORGE_WRAPPER = {
 FORGE_WRAPPER_NEW = {
     "mainClass": "net.cavoj.picoforgewrapper.Main",
     "library": {
-        "name": "net.cavoj:PicoForgeWrapper:1.4",
+        "name": "net.cavoj:PicoForgeWrapper:1.5",
         "downloads": {
             "artifact": {
-                "url": "https://storage.googleapis.com/picomc-forgewrapper/PicoForgeWrapper-1.4.jar",
-                "sha1": "4270ed08c514c0acbf0ce8fedc5c249f20221007",
-                "size": 7504,
+                "url": "https://storage.googleapis.com/picomc-forgewrapper/PicoForgeWrapper-1.5.jar",
+                "sha1": "c31e7cbb682e9329be35b12b12f76c9ee23c2916",
+                "size": 7573,
             }
         },
     },
