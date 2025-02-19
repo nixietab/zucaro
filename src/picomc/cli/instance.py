@@ -1,4 +1,5 @@
 import functools
+import asyncio
 
 import click
 
@@ -15,6 +16,13 @@ def instance_cmd(fn):
         return fn(*args, instance_name=sanitize_name(instance_name), **kwargs)
 
     return inner
+
+
+def coro(f):
+    @functools.wraps(f)
+    def wrapper(*args, **kwargs):
+        return asyncio.run(f(*args, **kwargs))
+    return wrapper
 
 
 @click.group()
@@ -58,9 +66,11 @@ def delete(im, instance_name):
 @click.option("--verify", is_flag=True, default=False)
 @click.option("-a", "--account", default=None)
 @click.option("--version-override", default=None)
+@click.option("--java", default=None, help="Custom Java directory")
 @pass_instance_manager
 @pass_account_manager
-def launch(am, im, instance_name, account, version_override, verify):
+@coro
+async def launch(am, im, instance_name, account, version_override, verify, java):
     """Launch the instance."""
     if account is None:
         account = am.get_default()
@@ -71,7 +81,7 @@ def launch(am, im, instance_name, account, version_override, verify):
         return
     inst = im.get(instance_name)
     try:
-        inst.launch(account, version_override, verify_hashes=verify)
+        await inst.launch(account, version_override, verify_hashes=verify, custom_java=java)
     except AccountError as e:
         logger.error("Not launching due to account error: {}".format(e))
 
@@ -79,12 +89,13 @@ def launch(am, im, instance_name, account, version_override, verify):
 @instance_cli.command("natives")
 @instance_cmd
 @pass_instance_manager
-def extract_natives(im, instance_name):
+@coro
+async def extract_natives(im, instance_name):
     """Extract natives and leave them on disk."""
     if not im.exists(instance_name):
         die("No such instance exists.")
     inst = im.get(instance_name)
-    inst.extract_natives()
+    await inst.extract_natives()
 
 
 @instance_cli.command("dir")
@@ -132,7 +143,6 @@ def config_cli(ctx, im, instance_name):
 @click.pass_obj
 def config_show(config):
     """Print the current instance config."""
-
     for k, v in config.items():
         print("{}: {}".format(k, v))
 

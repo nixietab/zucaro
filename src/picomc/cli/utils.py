@@ -1,5 +1,5 @@
 import functools
-
+import asyncio
 import click
 
 from picomc.launcher import Launcher
@@ -18,6 +18,13 @@ def pass_launcher_attrib(attr):
         return wrapper
 
     return decorator
+
+
+def coro(f):
+    @functools.wraps(f)
+    def wrapper(*args, **kwargs):
+        return asyncio.run(f(*args, **kwargs))
+    return wrapper
 
 
 pass_config_manager = pass_launcher_attrib("config_manager")
