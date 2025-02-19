@@ -7,7 +7,7 @@ from picomc.account import (
     OnlineAccount,
     RefreshError,
 )
-from picomc.cli.utils import pass_account_manager
+from picomc.cli.utils import pass_account_manager, coro
 from picomc.logging import logger
 from picomc.yggdrasil import AuthenticationError
 
@@ -59,7 +59,8 @@ def create(am, account, mojang_username, microsoft):
 @account_cli.command()
 @account_cmd
 @pass_account_manager
-def authenticate(am, account):
+@coro
+async def authenticate(am, account):
     """Retrieve access token from Mojang servers using password."""
 
     try:
@@ -75,9 +76,9 @@ def authenticate(am, account):
             import getpass
 
             p = getpass.getpass("Password: ")
-            a.authenticate(p)
+            await a.authenticate(p)  # Await the coroutine
         elif isinstance(a, MicrosoftAccount):
-            a.authenticate()
+            await a.authenticate()
         else:
             logger.error("Unknown account type")
     except AuthenticationError as e:

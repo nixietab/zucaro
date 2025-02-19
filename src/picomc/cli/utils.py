@@ -13,7 +13,7 @@ def pass_launcher_attrib(attr):
         @functools.wraps(fn)
         def wrapper(launcher, *a, **kwa):
             x = getattr(launcher, attr)
-            fn(x, *a, **kwa)
+            return fn(x, *a, **kwa)
 
         return wrapper
 
@@ -23,7 +23,13 @@ def pass_launcher_attrib(attr):
 def coro(f):
     @functools.wraps(f)
     def wrapper(*args, **kwargs):
-        return asyncio.run(f(*args, **kwargs))
+        loop = asyncio.get_event_loop()
+        if loop.is_running():
+            # Return the coroutine in a running loop
+            return f(*args, **kwargs)
+        else:
+            return loop.run_until_complete(f(*args, **kwargs))
+
     return wrapper
 
 
