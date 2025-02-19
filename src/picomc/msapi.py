@@ -1,7 +1,6 @@
 import colorama
-import requests
-from requests.exceptions import RequestException
-
+import aiohttp
+from aiohttp import ClientSession, ClientResponseError
 from picomc.errors import AuthenticationError, RefreshError, ValidationError
 from picomc.logging import logger
 
@@ -18,13 +17,14 @@ GRANT_TYPE = "urn:ietf:params:oauth:grant-type:device_code"
 
 
 class MicrosoftAuthApi:
-    def _ms_oauth(self):
+    async def _ms_oauth(self):
         data = {"client_id": CLIENT_ID, "scope": SCOPE}
 
-        resp = requests.post(URL_DEVICE_AUTH, data)
-        resp.raise_for_status()
+        async with ClientSession() as session:
+            async with session.post(URL_DEVICE_AUTH, data=data) as resp:
+                resp.raise_for_status()
+                j = await resp.json()
 
-        j = resp.json()
         device_code = j["device_code"]
 
         msg = j["message"]
@@ -47,42 +47,43 @@ class MicrosoftAuthApi:
                 input("Press enter to try again... ")
             first = False
 
-            resp = requests.post(URL_TOKEN, data)
-            if resp.status_code == 400:
-                j = resp.json()
-                logger.debug(j)
-                if j["error"] == "authorization_pending":
-                    logger.warning(j["error_description"])
-                    logger.info(msg)
-                    continue
-                else:
-                    raise AuthenticationError(j["error_description"])
-            resp.raise_for_status()
-
-            j = resp.json()
-            break
+            async with ClientSession() as session:
+                async with session.post(URL_TOKEN, data=data) as resp:
+                    if resp.status == 400:
+                        j = await resp.json()
+                        logger.debug(j)
+                        if j["error"] == "authorization_pending":
+                            logger.warning(j["error_description"])
+                            logger.info(msg)
+                            continue
+                        else:
+                            raise AuthenticationError(j["error_description"])
+                    resp.raise_for_status()
+                    j = await resp.json()
+                    break
 
         access_token = j["access_token"]
         refresh_token = j["refresh_token"]
         logger.debug("OAuth device code flow successful")
         return access_token, refresh_token
 
-    def _ms_oauth_refresh(self, refresh_token):
+    async def _ms_oauth_refresh(self, refresh_token):
         data = {
             "refresh_token": refresh_token,
             "grant_type": "refresh_token",
             "client_id": CLIENT_ID,
         }
-        resp = requests.post(URL_TOKEN, data)
-        resp.raise_for_status()
+        async with ClientSession() as session:
+            async with session.post(URL_TOKEN, data=data) as resp:
+                resp.raise_for_status()
+                j = await resp.json()
 
-        j = resp.json()
         access_token = j["access_token"]
         refresh_token = j["refresh_token"]
         logger.debug("OAuth code flow refresh successful")
         return access_token, refresh_token
 
-    def _xbl_auth(self, access_token):
+    async def _xbl_auth(self, access_token):
         data = {
             "Properties": {
                 "AuthMethod": "RPS",
@@ -92,80 +93,85 @@ class MicrosoftAuthApi:
             "RelyingParty": "http://auth.xboxlive.com",
             "TokenType": "JWT",
         }
-        resp = requests.post(URL_XBL, json=data)
-        resp.raise_for_status()
+        async with ClientSession() as session:
+            async with session.post(URL_XBL, json=data) as resp:
+                resp.raise_for_status()
+                j = await resp.json()
 
-        j = resp.json()
         logger.debug("XBL auth successful")
         return j["Token"], j["DisplayClaims"]["xui"][0]["uhs"]
 
-    def _xsts_auth(self, xbl_token):
+    async def _xsts_auth(self, xbl_token):
         data = {
             "Properties": {"SandboxId": "RETAIL", "UserTokens": [xbl_token]},
             "RelyingParty": "rp://api.minecraftservices.com/",
             "TokenType": "JWT",
         }
-        resp = requests.post(URL_XSTS, json=data)
-        resp.raise_for_status()
+        async with ClientSession() as session:
+            async with session.post(URL_XSTS, json=data) as resp:
+                resp.raise_for_status()
+                j = await resp.json()
 
-        j = resp.json()
         logger.debug("XSTS auth successful")
         return j["Token"]
 
-    def _mcs_auth(self, uhs, xsts_token):
+    async def _mcs_auth(self, uhs, xsts_token):
         data = {"identityToken": f"XBL3.0 x={uhs};{xsts_token}"}
-        resp = requests.post(URL_MCS, json=data)
-        resp.raise_for_status()
+        async with ClientSession() as session:
+            async with session.post(URL_MCS, json=data) as resp:
+                resp.raise_for_status()
+                j = await resp.json()
 
-        j = resp.json()
         logger.debug("Minecraft services auth successful")
         return j["access_token"]
 
-    def get_profile(self, mc_access_token):
+    async def get_profile(self, mc_access_token):
         try:
-            resp = requests.get(
-                URL_MCS_PROFILE, headers={"Authorization": f"Bearer {mc_access_token}"}
-            )
-            resp.raise_for_status()
-        except RequestException as e:
+            async with ClientSession() as session:
+                async with session.get(
+                    URL_MCS_PROFILE, headers={"Authorization": f"Bearer {mc_access_token}"}
+                ) as resp:
+                    resp.raise_for_status()
+                    return await resp.json()
+        except ClientResponseError as e:
             raise AuthenticationError(e)
-        return resp.json()
 
-    def _auth_rest(self, access_token, refresh_token):
-        xbl_token, uhs = self._xbl_auth(access_token)
-        xsts_token = self._xsts_auth(xbl_token)
-        mc_access_token = self._mcs_auth(uhs, xsts_token)
+    async def _auth_rest(self, access_token, refresh_token):
+        xbl_token, uhs = await self._xbl_auth(access_token)
+        xsts_token = await self._xsts_auth(xbl_token)
+        mc_access_token = await self._mcs_auth(uhs, xsts_token)
         return mc_access_token
 
-    def authenticate(self):
+    async def authenticate(self):
         try:
-            access_token, refresh_token = self._ms_oauth()
-            mc_access_token = self._auth_rest(access_token, refresh_token)
+            access_token, refresh_token = await self._ms_oauth()
+            mc_access_token = await self._auth_rest(access_token, refresh_token)
             return mc_access_token, refresh_token
-        except RequestException as e:
+        except ClientResponseError as e:
             raise AuthenticationError(e)
         except KeyError as e:
             raise AuthenticationError("Missing field in response", e)
 
-    def validate(self, mc_access_token):
+    async def validate(self, mc_access_token):
         try:
-            resp = requests.get(
-                URL_MCS_PROFILE, headers={"Authorization": f"Bearer {mc_access_token}"}
-            )
-            if resp.status_code == 401:
-                return False
+            async with ClientSession() as session:
+                async with session.get(
+                    URL_MCS_PROFILE, headers={"Authorization": f"Bearer {mc_access_token}"}
+                ) as resp:
+                    if resp.status == 401:
+                        return False
 
-            resp.raise_for_status()
-            profile = resp.json()
+                    resp.raise_for_status()
+                    profile = await resp.json()
 
-            return "id" in profile
-        except RequestException as e:
+                    return "id" in profile
+        except ClientResponseError as e:
             raise ValidationError(e)
 
-    def refresh(self, refresh_token):
+    async def refresh(self, refresh_token):
         try:
-            access_token, new_refresh_token = self._ms_oauth_refresh(refresh_token)
-            mc_access_token = self._auth_rest(access_token, refresh_token)
+            access_token, new_refresh_token = await self._ms_oauth_refresh(refresh_token)
+            mc_access_token = await self._auth_rest(access_token, new_refresh_token)
             return mc_access_token, new_refresh_token
-        except RequestException as e:
+        except ClientResponseError as e:
             raise RefreshError(e)

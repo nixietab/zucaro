@@ -7,6 +7,7 @@ from operator import attrgetter
 from pathlib import Path
 from string import Template
 from tempfile import mkdtemp
+import asyncio
 
 from picomc import logging
 from picomc.errors import RefreshError
@@ -97,13 +98,13 @@ class Instance:
     def get_minecraft_dir(self):
         return self.get_relpath("minecraft")
 
-    def get_java(self):
-        return self.config["java.path"]
+    def get_java(self, custom_java=None):
+        return custom_java or self.config["java.path"]
 
     def set_version(self, version):
         self.config["version"] = version
 
-    def launch(self, account, version=None, verify_hashes=False):
+    async def launch(self, account, version=None, verify_hashes=False, custom_java=None):
         vobj = self.launcher.version_manager.get_version(
             version or self.config["version"]
         )
@@ -120,7 +121,7 @@ class Instance:
         gamedir = self.get_minecraft_dir()
         os.makedirs(gamedir, exist_ok=True)
 
-        java = self.get_java()
+        java = self.get_java(custom_java)
         java_info = assert_java(java, vobj.java_version)
 
         libraries = vobj.get_libraries(java_info)
@@ -131,7 +132,7 @@ class Instance:
         with NativesExtractor(
             self.libraries_root, self, filter(attrgetter("is_native"), libraries)
         ) as natives_dir:
-            self._exec_mc(
+            await self._exec_mc(
                 account,
                 vobj,
                 java,
@@ -142,7 +143,7 @@ class Instance:
                 verify_hashes,
             )
 
-    def extract_natives(self):
+    async def extract_natives(self):
         vobj = self.launcher.version_manager.get_version(self.config["version"])
         java_info = assert_java(self.get_java(), vobj.java_version)
         vobj.download_libraries(java_info, verify_hashes=True)
@@ -153,7 +154,7 @@ class Instance:
         ne.extract()
         logger.info("Extracted natives to {}".format(ne.get_natives_path()))
 
-    def _exec_mc(
+    async def _exec_mc(
         self, account, v, java, java_info, gamedir, libraries, natives, verify_hashes
     ):
         libs = [lib.get_abspath(self.libraries_root) for lib in libraries]
@@ -192,7 +193,7 @@ class Instance:
             )
             return
         try:
-            account.refresh()
+            await account.refresh()
         except RefreshError as e:
             logger.warning(f"Failed to refresh account due to an error: {e}")
 
@@ -233,7 +234,7 @@ class Instance:
             logger.debug("Launching: " + shlex.join(fargs))
         else:
             logger.info("Launching the game")
-        subprocess.run(fargs, cwd=gamedir)
+        await asyncio.to_thread(subprocess.run, fargs, cwd=gamedir)
 
 
 class InstanceManager:

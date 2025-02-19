@@ -1,5 +1,6 @@
 import uuid
-
+import aiohttp
+import asyncio
 from picomc.errors import RefreshError, ValidationError
 from picomc.logging import logger
 from picomc.msapi import MicrosoftAuthApi
@@ -11,7 +12,7 @@ class NAMESPACE_NULL:
 
 
 def generate_client_token():
-    # Any random string, this matches the behaviour of the official launcher.
+    # Any random string, this matches the behavior of the official launcher.
     return str(uuid.uuid4().hex)
 
 
@@ -53,7 +54,7 @@ class OfflineAccount(Account):
     def gname(self):
         return self.name
 
-    def refresh(self):
+    async def refresh(self):
         return False
 
     def can_launch_game(self):
@@ -76,21 +77,21 @@ class OnlineAccount(Account):
     def new(cls, am, name, username):
         return cls(name=name, username=username, _am=am)
 
-    def validate(self):
-        r = self._am.yggdrasil.validate(self.access_token)
+    async def validate(self):
+        r = await self._am.yggdrasil.validate(self.access_token)
         if r:
             self.fresh = True
         return r
 
-    def refresh(self, force=False):
+    async def refresh(self, force=False):
         if self.fresh and not force:
             return False
         if self.is_authenticated:
-            if self.validate():
+            if await self.validate():
                 return
             else:
                 try:
-                    refresh = self._am.yggdrasil.refresh(self.access_token)
+                    refresh = await self._am.yggdrasil.refresh(self.access_token)
                     self.access_token, self.uuid, self.gname = refresh
                     self.fresh = True
                     return True
@@ -105,8 +106,8 @@ class OnlineAccount(Account):
         else:
             raise AccountError("Not authenticated.")
 
-    def authenticate(self, password):
-        self.access_token, self.uuid, self.gname = self._am.yggdrasil.authenticate(
+    async def authenticate(self, password):
+        self.access_token, self.uuid, self.gname = await self._am.yggdrasil.authenticate(
             self.username, password
         )
         self.is_authenticated = True
@@ -132,11 +133,11 @@ class MicrosoftAccount(Account):
     def new(cls, am, name):
         return cls(name=name, _am=am)
 
-    def refresh(self, force=False):
+    async def refresh(self, force=False):
         if not self.is_authenticated:
             raise RefreshError("Account is not authenticated, cannot refresh")
         try:
-            valid = self._am.msapi.validate(self.access_token)
+            valid = await self._am.msapi.validate(self.access_token)
         except ValidationError as e:
             raise RefreshError(e)
         if valid:
@@ -144,15 +145,15 @@ class MicrosoftAccount(Account):
             return False
         else:
             logger.debug("msa: token not valid anymore, refreshing")
-            self.access_token, self.refresh_token = self._am.msapi.refresh(
+            self.access_token, self.refresh_token = await self._am.msapi.refresh(
                 self.refresh_token
             )
             self.save()
             return True
 
-    def authenticate(self):
-        self.access_token, self.refresh_token = self._am.msapi.authenticate()
-        profile = self._am.msapi.get_profile(self.access_token)
+    async def authenticate(self):
+        self.access_token, self.refresh_token = await self._am.msapi.authenticate()
+        profile = await self._am.msapi.get_profile(self.access_token)
         self.gname = profile["name"]
         self.uuid = profile["id"]
         self.is_authenticated = True
