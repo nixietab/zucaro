@@ -23,10 +23,13 @@ def account_cli():
 
 
 @account_cli.command("list")
+@click.option("--ms", is_flag=True, help="List the online accounts")
 @pass_account_manager
-def _list(am):
-    """List avaiable accounts."""
+def _list(am, ms):
+    """List available accounts."""
     alist = am.list()
+    if ms:
+        alist = [acc for acc in alist if isinstance(am.get(acc), MicrosoftAccount)]
     if alist:
         lines = ("{}{}".format("* " if am.is_default(u) else "  ", u) for u in alist)
         print("\n".join(lines))
