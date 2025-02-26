@@ -1,6 +1,7 @@
 import click
 
 from picomc import mod
+from picomc.mod import modrinth
 
 
 @click.group()
@@ -48,6 +49,8 @@ def pack_cli():
 
 for pack in mod.PACKS:
     pack.register_cli(pack_cli)
+
+modrinth.register_cli(pack_cli)  # Register the modrinth command
 
 
 def register_mod_cli(picomc_cli):
