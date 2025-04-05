@@ -35,6 +35,7 @@ DIRECTORY_MAP = {
     Directory.INSTANCES: PurePath("instances"),
     Directory.LIBRARIES: PurePath("libraries"),
     Directory.VERSIONS: PurePath("versions"),
+    Directory.JAVA: PurePath("java"),
 }
 
 

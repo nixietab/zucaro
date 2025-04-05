@@ -7,6 +7,7 @@ from picomc.account import AccountError
 from picomc.cli.utils import pass_account_manager, pass_instance_manager, pass_launcher
 from picomc.logging import logger
 from picomc.utils import Directory, die, sanitize_name
+from picomc.java_manager import JavaManager
 
 
 def instance_cmd(fn):
@@ -67,10 +68,12 @@ def delete(im, instance_name):
 @click.option("-a", "--account", default=None)
 @click.option("--version-override", default=None)
 @click.option("--java", default=None, help="Custom Java directory")
+@click.option("--manage-java", is_flag=True, default=False,
+              help="Use Adoptium to automatically manage Java versions")
 @pass_instance_manager
 @pass_account_manager
 @coro
-async def launch(am, im, instance_name, account, version_override, verify, java):
+async def launch(am, im, instance_name, account, version_override, verify, java, manage_java):
     """Launch the instance."""
     if account is None:
         account = am.get_default()
@@ -81,10 +84,10 @@ async def launch(am, im, instance_name, account, version_override, verify, java)
         return
     inst = im.get(instance_name)
     try:
-        await inst.launch(account, version_override, verify_hashes=verify, custom_java=java)
+        await inst.launch(account, version_override, verify_hashes=verify, 
+                         custom_java=java, manage_java=manage_java)
     except AccountError as e:
         logger.error("Not launching due to account error: {}".format(e))
-
 
 @instance_cli.command("natives")
 @instance_cmd

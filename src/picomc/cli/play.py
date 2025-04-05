@@ -6,17 +6,20 @@ from picomc.cli.utils import coro, pass_account_manager, pass_instance_manager, 
 from picomc.logging import logger
 from picomc.errors import AccountError
 from picomc.account import OnlineAccount, OfflineAccount
+from picomc.java_manager import JavaManager
 
 @click.command()
 @click.argument("version", required=False)
 @click.option("-a", "--account", "account_name")
 @click.option("--verify", is_flag=True, default=False)
 @click.option("--java", default=None, help="Custom Java directory")
+@click.option("--manage-java", is_flag=True, default=False,
+              help="Use Adoptium to automatically manage Java versions")
 @pass_instance_manager
 @pass_account_manager
 @pass_launcher
 @coro
-async def play(launcher, am, im, version, account_name, verify, java):
+async def play(launcher, am, im, version, account_name, verify, java, manage_java):
     """Play Minecraft without having to deal with stuff"""
 
     if account_name:
@@ -43,7 +46,8 @@ async def play(launcher, am, im, version, account_name, verify, java):
         im.create("default", "latest")
     
     inst = im.get("default")
-    await inst.launch(account, version, verify_hashes=verify, custom_java=java)
-
+    await inst.launch(account, version, verify_hashes=verify, 
+                     custom_java=java, manage_java=manage_java)
+    
 def register_play_cli(picomc_cli):
     picomc_cli.add_command(play)

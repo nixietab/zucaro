@@ -5,6 +5,7 @@ import sys
 from enum import Enum, auto
 from functools import partial
 from pathlib import Path
+from enum import Enum
 
 from picomc.logging import logger
 
@@ -46,7 +47,7 @@ class Directory(Enum):
     INSTANCES = auto()
     LIBRARIES = auto()
     VERSIONS = auto()
-
+    JAVA = "java"
 
 class CachedProperty:
     def __init__(self, fn):

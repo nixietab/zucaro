@@ -15,6 +15,7 @@ from picomc.java import assert_java
 from picomc.logging import logger
 from picomc.rules import match_ruleset
 from picomc.utils import Directory, join_classpath, sanitize_name
+from picomc.java_manager import JavaManager
 
 
 class InstanceError(Exception):
@@ -104,7 +105,7 @@ class Instance:
     def set_version(self, version):
         self.config["version"] = version
 
-    async def launch(self, account, version=None, verify_hashes=False, custom_java=None):
+    async def launch(self, account, version=None, verify_hashes=False, custom_java=None, manage_java=False):
         vobj = self.launcher.version_manager.get_version(
             version or self.config["version"]
         )
@@ -121,9 +122,14 @@ class Instance:
         gamedir = self.get_minecraft_dir()
         os.makedirs(gamedir, exist_ok=True)
 
-        java = self.get_java(custom_java)
+        if manage_java:
+            java_manager = JavaManager(self.launcher)
+            java = str(java_manager.get_java_path(vobj.version_name))
+        else:
+            java = self.get_java(custom_java)
+            
         java_info = assert_java(java, vobj.java_version)
-
+        
         libraries = vobj.get_libraries(java_info)
         vobj.prepare_launch(gamedir, java_info, verify_hashes)
         # Do this here so that configs are not needlessly overwritten after
