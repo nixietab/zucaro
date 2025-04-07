@@ -15,11 +15,12 @@ from picomc.java_manager import JavaManager
 @click.option("--java", default=None, help="Custom Java directory")
 @click.option("--manage-java", is_flag=True, default=False,
               help="Use Adoptium to automatically manage Java versions")
+@click.option("--assigned-ram", default=None, help="Amount of RAM to assign to the game (e.g. '2G' for 2GB)")
 @pass_instance_manager
 @pass_account_manager
 @pass_launcher
 @coro
-async def play(launcher, am, im, version, account_name, verify, java, manage_java):
+async def play(launcher, am, im, version, account_name, verify, java, manage_java, assigned_ram):
     """Play Minecraft without having to deal with stuff"""
 
     if account_name:
@@ -46,8 +47,22 @@ async def play(launcher, am, im, version, account_name, verify, java, manage_jav
         im.create("default", "latest")
     
     inst = im.get("default")
-    await inst.launch(account, version, verify_hashes=verify, 
-                     custom_java=java, manage_java=manage_java)
+    
+    # If assigned_ram is provided, temporarily override the memory settings
+    if assigned_ram:
+        original_min = inst.config["java.memory.min"]
+        original_max = inst.config["java.memory.max"]
+        inst.config["java.memory.min"] = assigned_ram
+        inst.config["java.memory.max"] = assigned_ram
+    
+    try:
+        await inst.launch(account, version, verify_hashes=verify, 
+                         custom_java=java, manage_java=manage_java)
+    finally:
+        # Restore original memory settings if they were overridden
+        if assigned_ram:
+            inst.config["java.memory.min"] = original_min
+            inst.config["java.memory.max"] = original_max
     
 def register_play_cli(picomc_cli):
     picomc_cli.add_command(play)

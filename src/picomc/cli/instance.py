@@ -70,10 +70,11 @@ def delete(im, instance_name):
 @click.option("--java", default=None, help="Custom Java directory")
 @click.option("--manage-java", is_flag=True, default=False,
               help="Use Adoptium to automatically manage Java versions")
+@click.option("--assigned-ram", default=None, help="Amount of RAM to assign to the game (e.g. '2G' for 2GB)")
 @pass_instance_manager
 @pass_account_manager
 @coro
-async def launch(am, im, instance_name, account, version_override, verify, java, manage_java):
+async def launch(am, im, instance_name, account, version_override, verify, java, manage_java, assigned_ram):
     """Launch the instance."""
     if account is None:
         account = am.get_default()
@@ -83,11 +84,25 @@ async def launch(am, im, instance_name, account, version_override, verify, java,
         logger.error("No such instance exists.")
         return
     inst = im.get(instance_name)
+    
+    # If assigned_ram is provided, temporarily override the memory settings
+    if assigned_ram:
+        original_min = inst.config["java.memory.min"]
+        original_max = inst.config["java.memory.max"]
+        inst.config["java.memory.min"] = assigned_ram
+        inst.config["java.memory.max"] = assigned_ram
+    
     try:
         await inst.launch(account, version_override, verify_hashes=verify, 
                          custom_java=java, manage_java=manage_java)
     except AccountError as e:
         logger.error("Not launching due to account error: {}".format(e))
+    finally:
+        # Restore original memory settings if they were overridden
+        if assigned_ram:
+            inst.config["java.memory.min"] = original_min
+            inst.config["java.memory.max"] = original_max
+
 
 @instance_cli.command("natives")
 @instance_cmd
