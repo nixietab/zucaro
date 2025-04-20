@@ -21,7 +21,7 @@ from picomc.utils import Directory
 
 _loader_name = "forge"
 
-MAVEN_URL = "https://files.minecraftforge.net/maven/net/minecraftforge/forge/"
+MAVEN_URL = "https://maven.minecraftforge.net/net/minecraftforge/forge/"
 PROMO_FILE = "promotions_slim.json"
 META_FILE = "maven-metadata.xml"
 INSTALLER_FILE = "forge-{}-installer.jar"
