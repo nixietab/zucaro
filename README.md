@@ -1,3 +1,9 @@
+# hey
+
+This is a fork thats made to work as the backend of the picodulce launcher, this is a work in progress and a lot of things will change
+
+this is a fork of the amazing work of [sammko](https://github.com/sammko/picomc)
+
 picomc
 ====
 
