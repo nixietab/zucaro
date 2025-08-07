@@ -13,18 +13,18 @@ certifi==2024.2.2
 charset-normalizer==3.3.2
     # via requests
 click==8.1.7
-    # via picomc
+    # via zucaro
 colorama==0.4.6
-    # via picomc
+    # via zucaro
 coloredlogs==15.0.1
-    # via picomc
+    # via zucaro
 humanfriendly==10.0
     # via coloredlogs
 idna==3.7
     # via requests
 requests==2.31.0
-    # via picomc
+    # via zucaro
 tqdm==4.66.2
-    # via picomc
+    # via zucaro
 urllib3==2.2.1
     # via requests
