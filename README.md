@@ -15,23 +15,6 @@ structure mimics the vanilla launcher and as such most mod installers
 though you will have to change the installation path.
 Don't hesitate to report any problems you run into.
 
-Installation
----
-
-The easiest and most portable way to install zucaro is using pip, from the
-Python Package Index (PyPI):
-
-```
-pip install zucaro
-```
-
-Depending on your configuration, you may either have to run this command
-with elevated privileges (using e.g. `sudo`) or add the `--user` flag like this:
-
-```
-pip install --user zucaro
-```
-
 Usage
 ---
 
