@@ -1,6 +1,12 @@
 import colorama
 import aiohttp
-from aiohttp import ClientSession, ClientResponseError
+from aiohttp import (
+    ClientConnectorError,
+    ClientOSError,
+    ClientResponseError,
+    ClientSession,
+    ServerDisconnectedError,
+)
 from zucaro.errors import AuthenticationError, RefreshError, ValidationError
 from zucaro.logging import logger
 
@@ -20,10 +26,13 @@ class MicrosoftAuthApi:
     async def _ms_oauth(self):
         data = {"client_id": CLIENT_ID, "scope": SCOPE}
 
-        async with ClientSession() as session:
-            async with session.post(URL_DEVICE_AUTH, data=data) as resp:
-                resp.raise_for_status()
-                j = await resp.json()
+        try:
+            async with ClientSession() as session:
+                async with session.post(URL_DEVICE_AUTH, data=data) as resp:
+                    resp.raise_for_status()
+                    j = await resp.json()
+        except (ClientConnectorError, ServerDisconnectedError, ClientOSError) as e:
+            raise AuthenticationError("Connection error during OAuth", e)
 
         device_code = j["device_code"]
 
@@ -47,20 +56,23 @@ class MicrosoftAuthApi:
                 input("Press enter to try again... ")
             first = False
 
-            async with ClientSession() as session:
-                async with session.post(URL_TOKEN, data=data) as resp:
-                    if resp.status == 400:
+            try:
+                async with ClientSession() as session:
+                    async with session.post(URL_TOKEN, data=data) as resp:
+                        if resp.status == 400:
+                            j = await resp.json()
+                            logger.debug(j)
+                            if j["error"] == "authorization_pending":
+                                logger.warning(j["error_description"])
+                                logger.info(msg)
+                                continue
+                            else:
+                                raise AuthenticationError(j["error_description"])
+                        resp.raise_for_status()
                         j = await resp.json()
-                        logger.debug(j)
-                        if j["error"] == "authorization_pending":
-                            logger.warning(j["error_description"])
-                            logger.info(msg)
-                            continue
-                        else:
-                            raise AuthenticationError(j["error_description"])
-                    resp.raise_for_status()
-                    j = await resp.json()
-                    break
+                        break
+            except (ClientConnectorError, ServerDisconnectedError, ClientOSError) as e:
+                raise AuthenticationError("Connection error during token polling", e)
 
         access_token = j["access_token"]
         refresh_token = j["refresh_token"]
@@ -73,10 +85,13 @@ class MicrosoftAuthApi:
             "grant_type": "refresh_token",
             "client_id": CLIENT_ID,
         }
-        async with ClientSession() as session:
-            async with session.post(URL_TOKEN, data=data) as resp:
-                resp.raise_for_status()
-                j = await resp.json()
+        try:
+            async with ClientSession() as session:
+                async with session.post(URL_TOKEN, data=data) as resp:
+                    resp.raise_for_status()
+                    j = await resp.json()
+        except (ClientConnectorError, ServerDisconnectedError, ClientOSError) as e:
+            raise RefreshError("Connection error during token refresh", e)
 
         access_token = j["access_token"]
         refresh_token = j["refresh_token"]
@@ -93,10 +108,13 @@ class MicrosoftAuthApi:
             "RelyingParty": "http://auth.xboxlive.com",
             "TokenType": "JWT",
         }
-        async with ClientSession() as session:
-            async with session.post(URL_XBL, json=data) as resp:
-                resp.raise_for_status()
-                j = await resp.json()
+        try:
+            async with ClientSession() as session:
+                async with session.post(URL_XBL, json=data) as resp:
+                    resp.raise_for_status()
+                    j = await resp.json()
+        except (ClientConnectorError, ServerDisconnectedError, ClientOSError) as e:
+            raise AuthenticationError("Connection error during XBL auth", e)
 
         logger.debug("XBL auth successful")
         return j["Token"], j["DisplayClaims"]["xui"][0]["uhs"]
@@ -107,20 +125,26 @@ class MicrosoftAuthApi:
             "RelyingParty": "rp://api.minecraftservices.com/",
             "TokenType": "JWT",
         }
-        async with ClientSession() as session:
-            async with session.post(URL_XSTS, json=data) as resp:
-                resp.raise_for_status()
-                j = await resp.json()
+        try:
+            async with ClientSession() as session:
+                async with session.post(URL_XSTS, json=data) as resp:
+                    resp.raise_for_status()
+                    j = await resp.json()
+        except (ClientConnectorError, ServerDisconnectedError, ClientOSError) as e:
+            raise AuthenticationError("Connection error during XSTS auth", e)
 
         logger.debug("XSTS auth successful")
         return j["Token"]
 
     async def _mcs_auth(self, uhs, xsts_token):
         data = {"identityToken": f"XBL3.0 x={uhs};{xsts_token}"}
-        async with ClientSession() as session:
-            async with session.post(URL_MCS, json=data) as resp:
-                resp.raise_for_status()
-                j = await resp.json()
+        try:
+            async with ClientSession() as session:
+                async with session.post(URL_MCS, json=data) as resp:
+                    resp.raise_for_status()
+                    j = await resp.json()
+        except (ClientConnectorError, ServerDisconnectedError, ClientOSError) as e:
+            raise AuthenticationError("Connection error during Minecraft services auth", e)
 
         logger.debug("Minecraft services auth successful")
         return j["access_token"]
@@ -135,6 +159,8 @@ class MicrosoftAuthApi:
                     return await resp.json()
         except ClientResponseError as e:
             raise AuthenticationError(e)
+        except (ClientConnectorError, ServerDisconnectedError, ClientOSError) as e:
+            raise AuthenticationError("Connection error getting profile", e)
 
     async def _auth_rest(self, access_token, refresh_token):
         xbl_token, uhs = await self._xbl_auth(access_token)
@@ -167,6 +193,8 @@ class MicrosoftAuthApi:
                     return "id" in profile
         except ClientResponseError as e:
             raise ValidationError(e)
+        except (ClientConnectorError, ServerDisconnectedError, ClientOSError):
+            return False
 
     async def refresh(self, refresh_token):
         try:

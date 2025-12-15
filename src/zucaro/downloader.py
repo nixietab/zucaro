@@ -8,6 +8,7 @@ from contextlib import contextmanager
 
 import certifi
 import urllib3
+from urllib3.exceptions import MaxRetryError, NewConnectionError
 from tqdm import tqdm
 
 import zucaro.logging
@@ -72,14 +73,22 @@ class Downloader:
             raise InterruptedError
         os.makedirs(os.path.dirname(dest), exist_ok=True)
         logger.debug("Downloading [{}/{}]: {}".format(i, self.total, url))
-        resp = self.http_pool.request("GET", url, preload_content=False)
-        if resp.status != 200:
+        try:
+            resp = self.http_pool.request("GET", url, preload_content=False)
+            if resp.status != 200:
+                self.errors.append(
+                    "Failed to download ({}) [{}/{}]: {}".format(
+                        resp.status, i, self.total, url
+                    )
+                )
+                resp.release_conn()
+                return
+        except (MaxRetryError, NewConnectionError) as e:
             self.errors.append(
-                "Failed to download ({}) [{}/{}]: {}".format(
-                    resp.status, i, self.total, url
+                "Connection error downloading [{}/{}]: {} ({})".format(
+                    i, self.total, url, e
                 )
             )
-            resp.release_conn()
             return
         with DlTempFile(dir=os.path.dirname(dest), delete=False) as tempf:
             self.copyfileobj_prog(resp, tempf, sz_callback)

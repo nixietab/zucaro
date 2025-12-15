@@ -187,6 +187,13 @@ class Version:
             j = json.loads(raw)
             return j
         except requests.ConnectionError:
+            if vspec_path.exists():
+                logger.warning(
+                    "Failed to retrieve version json file. "
+                    "Using cached version, which may be outdated or corrupt."
+                )
+                with open(vspec_path) as fp:
+                    return json.load(fp)
             die("Failed to retrieve version json file. Check your internet connection.")
 
     def get_raw_asset_index(self, asset_index_spec):
@@ -205,6 +212,13 @@ class Version:
                 fp.write(raw)
             return json.loads(raw)
         except requests.ConnectionError:
+            if fpath.exists():
+                logger.warning(
+                    "Failed to retrieve asset index. "
+                    "Using cached version, which may be outdated or corrupt."
+                )
+                with open(fpath) as fp:
+                    return json.load(fp)
             die("Failed to retrieve asset index.")
 
     def get_raw_asset_index_nodl(self, id_):

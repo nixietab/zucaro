@@ -69,7 +69,10 @@ class MojangYggdrasil:
 
     def validate(self, access_token):
         ep = urljoin(self.BASE_URL, "/validate")
-        resp = requests.post(
-            ep, json={"accessToken": access_token, "clientToken": self.client_token}
-        )
-        return resp.status_code == 204
+        try:
+            resp = requests.post(
+                ep, json={"accessToken": access_token, "clientToken": self.client_token}
+            )
+            return resp.status_code == 204
+        except RequestException:
+            return False
