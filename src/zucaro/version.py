@@ -4,6 +4,7 @@ import operator
 import os
 import posixpath
 import shutil
+import time
 import urllib.parse
 import urllib.request
 from functools import reduce
@@ -397,6 +398,14 @@ class VersionManager:
 
     def get_manifest(self):
         manifest_filepath = self.launcher.get_path(Directory.VERSIONS, "manifest.json")
+
+        if manifest_filepath.exists():
+            mtime = os.path.getmtime(manifest_filepath)
+            if time.time() - mtime < 86400:
+                logger.debug("Using cached version_manifest (less than 24h old)")
+                with open(manifest_filepath) as mfile:
+                    return json.load(mfile)
+
         try:
             m = requests.get(self.MANIFEST_URL).json()
             with open(manifest_filepath, "w") as mfile:
