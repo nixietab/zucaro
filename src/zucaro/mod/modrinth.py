@@ -1,16 +1,17 @@
-import requests
-import click
-import json
-import zipfile
-import tempfile
 import hashlib
+import json
 import os
-import shutil
-from pathlib import Path, PurePath
-from zucaro.logging import logger
-from zucaro.downloader import DownloadQueue
-from zucaro.instance import InstanceManager, sanitize_name
+import tempfile
+import zipfile
+from pathlib import Path
+
+import click
+import requests
+
 from zucaro.cli.utils import pass_instance_manager, pass_launcher
+from zucaro.downloader import DownloadQueue
+from zucaro.instance import sanitize_name
+from zucaro.logging import logger
 
 
 def resolve_pack_meta(pack_id, version=None):
@@ -42,14 +43,14 @@ def verify_file_hash(file_path: Path, hashes: dict) -> bool:
 
     with open(file_path, 'rb') as f:
         content = f.read()
-        
+
     if 'sha512' in hashes:
         calculated = hashlib.sha512(content).hexdigest()
         return calculated == hashes['sha512']
     elif 'sha1' in hashes:
         calculated = hashlib.sha1(content).hexdigest()
         return calculated == hashes['sha1']
-    
+
     return False
 
 
@@ -61,7 +62,7 @@ def clean_conflicting_libraries(minecraft_dir: Path):
 
     # Map of library base names to their versions and full paths
     library_versions = {}
-    
+
     # Scan libraries directory
     for root, _, files in os.walk(libraries_dir):
         for file in files:
@@ -72,7 +73,7 @@ def clean_conflicting_libraries(minecraft_dir: Path):
                 if len(parts) >= 2:
                     base_name = '-'.join(parts[:-1])
                     version = parts[-1]
-                    
+
                     if base_name not in library_versions:
                         library_versions[base_name] = []
                     library_versions[base_name].append((version, path))
@@ -81,11 +82,10 @@ def clean_conflicting_libraries(minecraft_dir: Path):
     for lib_name, versions in library_versions.items():
         if len(versions) > 1:
             # Sort by version number (assuming semantic versioning)
-            versions.sort(key=lambda x: [int(p) if p.isdigit() else p 
+            versions.sort(key=lambda x: [int(p) if p.isdigit() else p
                                       for p in x[0].split('.')])
-            
+
             # Keep the newest version, remove others
-            newest = versions[-1]
             for version, path in versions[:-1]:
                 logger.info(f"Removing older version of {lib_name}: {version}")
                 try:
@@ -107,7 +107,7 @@ def process_mrpack(mrpack_path: Path, target_dir: Path, download_queue: Download
             raise ValueError("Invalid modrinth.index.json format")
 
         logger.debug(f"Modpack format version: {index_data.get('format_version', 'unknown')}")
-        
+
         # Create minecraft directory if it doesn't exist
         target_dir.mkdir(parents=True, exist_ok=True)
 
@@ -120,7 +120,7 @@ def process_mrpack(mrpack_path: Path, target_dir: Path, download_queue: Download
                     if relative_path:
                         target_path = target_dir / relative_path
                         target_path.parent.mkdir(parents=True, exist_ok=True)
-                        
+
                         with zip_ref.open(file_name) as source, open(target_path, 'wb') as target:
                             target.write(source.read())
                         logger.debug(f"Extracted override: {file_name} -> {target_path}")
@@ -154,7 +154,7 @@ def process_mrpack(mrpack_path: Path, target_dir: Path, download_queue: Download
         # Get Minecraft version from dependencies
         dependencies = index_data.get('dependencies', {})
         minecraft_version = dependencies.get('minecraft', '')
-        
+
         return minecraft_version
 
 
@@ -180,7 +180,7 @@ def install(pack_id, version, launcher, im, instance_name):
 
     # Find the primary .mrpack file
     mrpack_file = next((f for f in version_manifest["files"] if f.get("primary", False)), None)
-    
+
     if not mrpack_file:
         logger.error("No primary .mrpack file found in modpack")
         return
@@ -192,7 +192,7 @@ def install(pack_id, version, launcher, im, instance_name):
         for chunk in response.iter_content(chunk_size=8192):
             tmp_file.write(chunk)
         tmp_file.flush()
-        
+
         mrpack_path = Path(tmp_file.name)
 
     try:
@@ -264,10 +264,10 @@ def fix_libraries_cli(im, instance_name):
     if not im.exists(instance_name):
         logger.error(f"Instance {instance_name} does not exist")
         return
-    
+
     inst = im.get(instance_name)
     mcdir = inst.get_minecraft_dir()
-    
+
     logger.info(f"Fixing library conflicts for instance {instance_name}...")
     clean_conflicting_libraries(mcdir)
     logger.info("Library conflicts resolved")

@@ -1,5 +1,4 @@
 import colorama
-import aiohttp
 from aiohttp import (
     ClientConnectorError,
     ClientOSError,
@@ -7,6 +6,7 @@ from aiohttp import (
     ClientSession,
     ServerDisconnectedError,
 )
+
 from zucaro.errors import AuthenticationError, RefreshError, ValidationError
 from zucaro.logging import logger
 

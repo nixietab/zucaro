@@ -1,5 +1,5 @@
-import functools
 import asyncio
+import functools
 
 import click
 
@@ -7,7 +7,6 @@ from zucaro.account import AccountError
 from zucaro.cli.utils import pass_account_manager, pass_instance_manager, pass_launcher
 from zucaro.logging import logger
 from zucaro.utils import Directory, die, sanitize_name
-from zucaro.java_manager import JavaManager
 
 
 def instance_cmd(fn):
@@ -84,16 +83,16 @@ async def launch(am, im, instance_name, account, version_override, verify, java,
         logger.error("No such instance exists.")
         return
     inst = im.get(instance_name)
-    
+
     # If assigned_ram is provided, temporarily override the memory settings
     if assigned_ram:
         original_min = inst.config["java.memory.min"]
         original_max = inst.config["java.memory.max"]
         inst.config["java.memory.min"] = assigned_ram
         inst.config["java.memory.max"] = assigned_ram
-    
+
     try:
-        await inst.launch(account, version_override, verify_hashes=verify, 
+        await inst.launch(account, version_override, verify_hashes=verify,
                          custom_java=java, manage_java=manage_java)
     except AccountError as e:
         logger.error("Not launching due to account error: {}".format(e))

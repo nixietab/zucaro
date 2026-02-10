@@ -1,5 +1,4 @@
 import json
-import urllib.parse
 from datetime import datetime, timezone
 
 import click
@@ -39,7 +38,7 @@ def get_loader_meta(game_version, loader_version):
     obj = requests.get(url).json()
     if len(obj) == 0:
         raise VersionError("No loader versions available")
-    
+
     if loader_version and "+" in loader_version:
         loader_version = loader_version.split("+")[0]
 
@@ -54,7 +53,7 @@ def get_loader_meta(game_version, loader_version):
     # Get the launcher metadata for this specific combination
     launcher_meta_url = f"https://meta.quiltmc.org/v3/versions/loader/{game_version}/{ver['version']}/profile/json"
     launcher_meta = requests.get(launcher_meta_url).json()
-    
+
     return ver["version"], launcher_meta
 
 
@@ -69,30 +68,30 @@ def resolve_version(game_version=None, loader_version=None):
 def generate_vspec_obj(version_name, loader_obj, loader_version, game_version):
     # For Quilt, we can use the profile JSON directly as it's already in the correct format
     vspec = loader_obj.copy()
-    
+
     # Update the ID to our custom version name
     vspec["id"] = version_name
-    
+
     # Ensure we have the correct jar reference to prevent duplication
     vspec["inheritsFrom"] = game_version
     vspec["jar"] = game_version
-    
+
     # Add current timestamp
     vspec["time"] = datetime.now(timezone.utc).astimezone().isoformat(timespec="seconds")
-    
+
     # Ensure we have all required libraries
     if "libraries" not in vspec:
         vspec["libraries"] = []
-    
+
     # Add Quilt loader library if not present
     loader_library = {
         "name": f"{PACKAGE}:{LOADER_NAME}:{loader_version}",
         "url": MAVEN_BASE
     }
-    
+
     if loader_library not in vspec["libraries"]:
         vspec["libraries"].append(loader_library)
-    
+
     return vspec
 
 

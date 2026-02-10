@@ -1,12 +1,16 @@
-import click
-import asyncio
 import getpass
 
-from zucaro.cli.utils import coro, pass_account_manager, pass_instance_manager, pass_launcher
-from zucaro.logging import logger
+import click
+
+from zucaro.account import OfflineAccount, OnlineAccount
+from zucaro.cli.utils import (
+    coro,
+    pass_account_manager,
+    pass_instance_manager,
+    pass_launcher,
+)
 from zucaro.errors import AccountError
-from zucaro.account import OnlineAccount, OfflineAccount
-from zucaro.java_manager import JavaManager
+
 
 @click.command()
 @click.argument("version", required=False)
@@ -42,27 +46,27 @@ async def play(launcher, am, im, version, account_name, verify, java, manage_jav
             if email:
                 password = getpass.getpass("\nPassword:\n> ")
                 await account.authenticate(password)
-    
+
     if not im.exists("default"):
         im.create("default", "latest")
-    
+
     inst = im.get("default")
-    
+
     # If assigned_ram is provided, temporarily override the memory settings
     if assigned_ram:
         original_min = inst.config["java.memory.min"]
         original_max = inst.config["java.memory.max"]
         inst.config["java.memory.min"] = assigned_ram
         inst.config["java.memory.max"] = assigned_ram
-    
+
     try:
-        await inst.launch(account, version, verify_hashes=verify, 
+        await inst.launch(account, version, verify_hashes=verify,
                          custom_java=java, manage_java=manage_java)
     finally:
         # Restore original memory settings if they were overridden
         if assigned_ram:
             inst.config["java.memory.min"] = original_min
             inst.config["java.memory.max"] = original_max
-    
+
 def register_play_cli(zucaro_cli):
     zucaro_cli.add_command(play)

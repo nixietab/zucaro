@@ -1,6 +1,5 @@
 import uuid
-import aiohttp
-import asyncio
+
 from zucaro.errors import RefreshError, ValidationError
 from zucaro.logging import logger
 from zucaro.msapi import MicrosoftAuthApi

@@ -1,10 +1,10 @@
 import urllib.parse
+from collections import defaultdict
 from dataclasses import dataclass
 from pathlib import Path, PurePosixPath
 from platform import architecture
 from string import Template
-from typing import Optional, Dict
-from collections import defaultdict
+from typing import Dict, Optional
 
 from zucaro.logging import logger
 from zucaro.osinfo import osinfo

@@ -5,7 +5,6 @@ import sys
 from enum import Enum, auto
 from functools import partial
 from pathlib import Path
-from enum import Enum
 
 from zucaro.logging import logger
 

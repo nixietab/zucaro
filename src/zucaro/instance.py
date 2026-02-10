@@ -1,3 +1,4 @@
+import asyncio
 import os
 import shlex
 import shutil
@@ -7,15 +8,14 @@ from operator import attrgetter
 from pathlib import Path
 from string import Template
 from tempfile import mkdtemp
-import asyncio
 
 from zucaro import logging
 from zucaro.errors import RefreshError
 from zucaro.java import assert_java
+from zucaro.java_manager import JavaManager
 from zucaro.logging import logger
 from zucaro.rules import match_ruleset
 from zucaro.utils import Directory, join_classpath, sanitize_name
-from zucaro.java_manager import JavaManager
 
 
 class InstanceError(Exception):
@@ -127,9 +127,9 @@ class Instance:
             java = str(java_manager.get_java_path(vobj.version_name))
         else:
             java = self.get_java(custom_java)
-            
+
         java_info = assert_java(java, vobj.java_version)
-        
+
         libraries = vobj.get_libraries(java_info)
         vobj.prepare_launch(gamedir, java_info, verify_hashes)
         # Do this here so that configs are not needlessly overwritten after

@@ -6,7 +6,6 @@ import posixpath
 import shutil
 import urllib.parse
 import urllib.request
-import asyncio
 from functools import reduce
 from pathlib import PurePath
 

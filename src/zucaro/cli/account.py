@@ -7,7 +7,7 @@ from zucaro.account import (
     OnlineAccount,
     RefreshError,
 )
-from zucaro.cli.utils import pass_account_manager, coro
+from zucaro.cli.utils import coro, pass_account_manager
 from zucaro.logging import logger
 from zucaro.yggdrasil import AuthenticationError
 

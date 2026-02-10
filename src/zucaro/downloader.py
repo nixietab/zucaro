@@ -8,8 +8,8 @@ from contextlib import contextmanager
 
 import certifi
 import urllib3
-from urllib3.exceptions import MaxRetryError, NewConnectionError
 from tqdm import tqdm
+from urllib3.exceptions import MaxRetryError, NewConnectionError
 
 import zucaro.logging
 from zucaro.logging import logger
