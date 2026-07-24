@@ -1,6 +1,6 @@
 [project]
 name = "zucaro"
-version = "0.5.4"
+version = "0.5.5"
 description = "A very small CLI Minecraft launcher."
 authors = [
     { name = "Samuel Čavoj", email = "samuel@cavoj.net" }
