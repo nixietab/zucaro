@@ -14,7 +14,7 @@ import requests
 from tqdm import tqdm
 
 from zucaro.cli.utils import pass_instance_manager, pass_launcher
-from zucaro.downloader import DownloadQueue
+from zucaro.downloader import DownloadQueue, _progress_callback
 from zucaro.logging import logger
 from zucaro.mod import forge
 from zucaro.utils import Directory, die, sanitize_name
@@ -127,10 +127,15 @@ def install_from_zip(zipfileobj, launcher, instance_manager, instance_name=None)
         dq = DownloadQueue()
 
         logger.info("Retrieving mod metadata from curse")
+        pcb = _progress_callback
         modcount = len(project_files)
         mcdir: Path = inst.get_minecraft_dir()
         moddir = mcdir / "mods"
-        with tqdm(total=modcount) as tq:
+        if pcb:
+            pcb(0, modcount, "Resolving mod metadata")
+        cm_tqdm = tqdm(total=modcount, disable=pcb is not None)
+        with cm_tqdm as tq:
+            cb_n = 0
             # Try to get as many file_infos as we can in one request
             # This endpoint only provides a few "latest" files for each project,
             # so it's not guaranteed that the response will contain the fileID
@@ -157,6 +162,9 @@ def install_from_zip(zipfileobj, launcher, instance_manager, instance_name=None)
             batch_recvd = modcount - len(project_files)
             logger.debug("Got {} batched".format(batch_recvd))
             tq.update(batch_recvd)
+            cb_n += batch_recvd
+            if pcb:
+                pcb(cb_n, tq.total, "Resolving mod metadata")
 
             with ThreadPoolExecutor(max_workers=16) as tpe:
 
@@ -187,9 +195,12 @@ def install_from_zip(zipfileobj, launcher, instance_manager, instance_name=None)
                         )
                     else:
                         tq.update(1)
+                        cb_n += 1
+                        if pcb:
+                            pcb(cb_n, tq.total, "Resolving mod metadata")
 
         logger.info("Downloading mod jars")
-        dq.download()
+        dq.download(progress_callback=pcb)
 
         logger.info("Copying overrides")
         overrides = archive_prefix / manifest["overrides"]

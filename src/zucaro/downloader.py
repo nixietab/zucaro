@@ -14,6 +14,14 @@ from urllib3.exceptions import MaxRetryError, NewConnectionError
 import zucaro.logging
 from zucaro.logging import logger
 
+_progress_callback = None
+
+
+def set_progress_callback(callback):
+    """Set callback for progress updates: callback(current, total, description)"""
+    global _progress_callback
+    _progress_callback = callback
+
 
 @contextmanager
 def DlTempFile(*args, default_mode=0o666, try_delete=True, **kwargs):
@@ -118,9 +126,10 @@ class Downloader:
 
     def download(self):
         logger.debug("Downloading {} files.".format(self.total))
-        disable_progressbar = zucaro.logging.debug
+        pcb = _progress_callback
+        disable_progressbar = zucaro.logging.debug or pcb is not None
 
-        if self.known_size:
+        if self.known_size and not pcb:
             cm_progressbar = tqdm(
                 total=self.total_size,
                 disable=disable_progressbar,
@@ -132,14 +141,20 @@ class Downloader:
             cm_progressbar = tqdm(total=self.total, disable=disable_progressbar)
 
         with cm_progressbar as tq, ThreadPoolExecutor(max_workers=self.workers) as tpe:
+            if pcb:
+                pcb(0, self.total, "Downloading files")
             for i, (url, dest) in enumerate(self.queue, start=1):
-                cb = tq.update if self.known_size else (lambda x: None)
-                fut = tpe.submit(self.download_file, i, url, dest, cb)
+                dl_cb = tq.update if (self.known_size and not pcb) else (lambda x: None)
+                fut = tpe.submit(self.download_file, i, url, dest, dl_cb)
                 self.fut_to_url[fut] = url
 
+            completed = 0
             try:
                 for fut in concurrent.futures.as_completed(self.fut_to_url.keys()):
                     self.reap_future(fut, tq)
+                    completed += 1
+                    if pcb:
+                        pcb(completed, self.total, "Downloading files")
             except KeyboardInterrupt as ex:
                 self.cancel(tq, tpe)
                 raise ex from None
@@ -166,7 +181,13 @@ class DownloadQueue:
     def __len__(self):
         return len(self.q)
 
-    def download(self):
+    def download(self, progress_callback=None):
         if not self.q:
             return True
-        return Downloader(self.q, total_size=self.size).download()
+        old_cb = _progress_callback
+        if progress_callback is not None:
+            set_progress_callback(progress_callback)
+        try:
+            return Downloader(self.q, total_size=self.size).download()
+        finally:
+            set_progress_callback(old_cb)
