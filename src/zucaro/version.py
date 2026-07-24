@@ -180,7 +180,7 @@ class Version:
 
         try:
             logger.debug("Downloading vspec file")
-            raw = requests.get(url).content
+            raw = requests.get(url, timeout=10).content
             vspec_path.parent.mkdir(parents=True, exist_ok=True)
             with open(vspec_path, "wb") as fp:
                 fp.write(raw)
@@ -207,7 +207,7 @@ class Version:
                 return json.load(fp)
         try:
             logger.debug("Downloading new asset index")
-            raw = requests.get(url).content
+            raw = requests.get(url, timeout=10).content
             with open(fpath, "wb") as fp:
                 fp.write(raw)
             return json.loads(raw)
@@ -384,7 +384,12 @@ class VersionManager:
     def __init__(self, launcher):
         self.launcher = launcher
         self.versions_root = launcher.get_path(Directory.VERSIONS)
-        self.manifest = self.get_manifest()
+
+    @property
+    def manifest(self):
+        if not hasattr(self, "_manifest"):
+            self._manifest = self.get_manifest()
+        return self._manifest
 
     def resolve_version_name(self, v):
         """Takes a metaversion and resolves to a version."""
@@ -407,7 +412,7 @@ class VersionManager:
                     return json.load(mfile)
 
         try:
-            m = requests.get(self.MANIFEST_URL).json()
+            m = requests.get(self.MANIFEST_URL, timeout=10).json()
             with open(manifest_filepath, "w") as mfile:
                 json.dump(m, mfile, indent=4, sort_keys=True)
             return m
@@ -425,7 +430,10 @@ class VersionManager:
                 raise RuntimeError("Failed to retrieve version manifest.")
 
     def version_list(self, vtype=VersionType.RELEASE, local=False):
-        r = [v["id"] for v in self.manifest["versions"] if vtype.match(v["type"])]
+        if vtype != VersionType.NONE:
+            r = [v["id"] for v in self.manifest["versions"] if vtype.match(v["type"])]
+        else:
+            r = []
         if local:
             r += sorted(
                 "{} [local]".format(path.name)
@@ -437,8 +445,11 @@ class VersionManager:
     def get_version(self, version_name):
         name = self.resolve_version_name(version_name)
         version_manifest = None
-        for ver in self.manifest["versions"]:
-            if ver["id"] == name:
-                version_manifest = ver
-                break
+        try:
+            for ver in self.manifest["versions"]:
+                if ver["id"] == name:
+                    version_manifest = ver
+                    break
+        except Exception:
+            pass
         return Version(name, self.launcher, version_manifest)
