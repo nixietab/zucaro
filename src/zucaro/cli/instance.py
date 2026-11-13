@@ -1,8 +1,10 @@
 import asyncio
 import functools
+from pathlib import Path
 
 import click
 
+from zucaro import mmc
 from zucaro.account import AccountError
 from zucaro.cli.utils import pass_account_manager, pass_instance_manager, pass_launcher
 from zucaro.logging import logger
@@ -41,6 +43,46 @@ def create(im, instance_name, version):
         logger.error("An instance with that name already exists.")
         return
     im.create(instance_name, version)
+
+
+@instance_cli.command("import")
+@click.argument(
+    "pack",
+    type=click.Path(exists=True, file_okay=True, dir_okay=False, path_type=Path),
+)
+@click.option("--name", "instance_name", default=None, help="Name for the new instance.")
+@click.option("--version-name", default=None, help="Name for the installed version.")
+@click.option(
+    "--no-instance",
+    is_flag=True,
+    default=False,
+    help="Only install the version, without creating an instance.",
+)
+@pass_launcher
+def import_(launcher, pack, instance_name, version_name, no_instance):
+    """Import a MultiMC/Prism instance export (.mmc.zip).
+
+    The pack's components are flattened into a normal zucaro version.  Files
+    stored in the pack's minecraft directory are extracted into a new
+    instance.
+    """
+    try:
+        result = mmc.import_pack(
+            launcher,
+            pack,
+            instance_name=instance_name,
+            version_name=version_name,
+            create_instance=not no_instance,
+        )
+    except mmc.MMCError as e:
+        die(str(e))
+
+    logger.info("Installed version: {}".format(result.version_name))
+    if result.instance_name:
+        logger.info("Created instance: {}".format(result.instance_name))
+        logger.info(
+            "Launch it with: zucaro instance launch {}".format(result.instance_name)
+        )
 
 
 @instance_cli.command()
